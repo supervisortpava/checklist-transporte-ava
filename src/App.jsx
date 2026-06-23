@@ -91,7 +91,6 @@ export default function App() {
   const [checksContenedor, setChecksContenedor] = useState(crearChecks(contenedor, "Sí"));
   const [checksCarga, setChecksCarga] = useState(crearChecks(carga, "Sí"));
   const [fotos, setFotos] = useState([]);
-  const [estadoGuardado, setEstadoGuardado] = useState("");
 
   const cambiarDato = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -106,71 +105,59 @@ export default function App() {
       },
     });
   };
+const GOOGLE_SCRIPT_URL =
+  "https://script.google.com/macros/s/AKfycbypdX1QFypfa8Rr4or1zU7VNQcAI7m9vRVv6U2mOWWpSi8wji6Y50LaOSfBXNBV1l1R/exec";
+const archivoABase64 = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
 
-  const GOOGLE_SCRIPT_URL =
-    "https://script.google.com/macros/s/AKfycbzz6fe_V1rTx5tTWjoob61emL8mdX1WKpSDVoptUGcVwXDBFXQTBh_oPObvIvHq0B4/exec";
-
-  const archivoABase64 = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-
-      reader.onload = () => {
-        resolve({
-          nombre: file.name,
-          tipo: file.type,
-          base64: reader.result,
-        });
-      };
-
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const guardarEnSheet = async () => {
-    try {
-      setEstadoGuardado("Guardando en Sheet y Drive...");
-
-      const fotosBase64 = await Promise.all(
-        fotos.map((foto) => archivoABase64(foto))
-      );
-
-      const data = {
-        fecha: form.fecha,
-        remito: form.remito,
-        transporte: form.transporte,
-        patente: form.patentes,
-        cliente: form.cliente,
-        producto: form.producto,
-        origen: form.origen,
-        destino: form.destino,
-        contenedor: form.contenedor,
-        precinto: form.precinto,
-        trabas: form.trabas,
-        piernas: form.piernas,
-        espejos: form.espejos,
-        estado: form.estadoFinal,
-        linkFotos: "",
-        fotos: fotosBase64,
-      };
-
-      console.log("Enviando a Sheet/Drive:", data);
-
-      await fetch(GOOGLE_SCRIPT_URL, {
-        method: "POST",
-        mode: "no-cors",
-        body: JSON.stringify(data),
+    reader.onload = () => {
+      resolve({
+        nombre: file.name,
+        tipo: file.type,
+        base64: reader.result,
       });
+    };
 
-      setEstadoGuardado("Registro enviado al Sheet y fotos enviadas a Drive");
-      return true;
-    } catch (error) {
-      console.error("Error guardando en Sheet/Drive", error);
-      setEstadoGuardado("Error al guardar. Revisar consola.");
-      return false;
-    }
-  };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+};
+const guardarEnSheet = async () => {
+  try {
+    const fotosBase64 = await Promise.all(
+      fotos.map((foto) => archivoABase64(foto))
+    );
 
+    const data = {
+      fecha: form.fecha,
+      remito: form.remito,
+      transporte: form.transporte,
+      patente: form.patentes,
+      cliente: form.cliente,
+      producto: form.producto,
+      origen: form.origen,
+      destino: form.destino,
+      contenedor: form.contenedor,
+      precinto: form.precinto,
+      trabas: form.trabas,
+      piernas: form.piernas,
+      espejos: form.espejos,
+      estado: form.estadoFinal,
+      linkFotos: "",
+      fotos: fotosBase64,
+    };
+
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+
+    console.log("Guardado en Sheet y Drive");
+  } catch (error) {
+    console.error("Error guardando:", error);
+  }
+};
   const generarPDF = async (conFotos) => {
     const templateBytes = await fetch("/checklist-template.pdf").then((res) => res.arrayBuffer());
     const pdfDoc = await PDFDocument.load(templateBytes);
@@ -188,7 +175,7 @@ export default function App() {
       escribir(valor.length > max ? valor.slice(0, max) : valor, x, y, size);
     };
 
-    const marcar = (x, y, size = 7) => {
+    const marcar = (x, y, size = 9) => {
       page.drawText("X", { x, y, size, font: bold, color: rgb(0, 0, 0) });
     };
 
@@ -207,15 +194,14 @@ export default function App() {
 
     escribirCorto(form.cliente, 89, 672, 55, 7);
 
-    escribirCorto(form.cantidadPallets, 95, 657, 18, 6.5);
-    escribirCorto(form.unidades, 470, 657, 18, 6.5);
+    escribirCorto(form.cantidadPallets, 122, 653, 14, 6.5);
+    escribirCorto(form.unidades, 520, 653, 14, 6.5);
 
-    // Casillas de ingreso/egreso: subidas para que no pisen la línea inferior
-    if (form.ingresoPlanta === "Vacío") marcar(184, 645);
-    if (form.ingresoPlanta === "Cargado") marcar(267, 645);
-    if (form.egresoPlanta === "Vacío") marcar(453, 645);
-    if (form.egresoPlanta === "Cargado") marcar(516, 645);
+    if (form.ingresoPlanta === "Vacío") marcar(184, 641);
+if (form.ingresoPlanta === "Cargado") marcar(287, 641);
 
+if (form.egresoPlanta === "Vacío") marcar(455, 641);
+if (form.egresoPlanta === "Cargado") marcar(548, 641);
     // CONTROL DE PALLETS
     const yPallets = {
       "Integridad de film stretch": 614,
@@ -314,60 +300,93 @@ export default function App() {
     if (form.capacitadoObs) escribirCorto(form.capacitadoObs, 425, 118, 28, 6.5);
 
     // ESTADO FINAL Y MUESTRAS
-    if (form.estadoFinal === "Aceptada") marcar(184, 98);
-    if (form.estadoFinal === "Rechazada") marcar(268, 98);
-    if (form.entregaMuestras === "Sí") marcar(453, 98);
-    if (form.entregaMuestras === "No") marcar(516, 98);
+if (form.estadoFinal === "Aceptada") marcar(185, 82);
+if (form.estadoFinal === "Rechazada") marcar(270, 82);
+
+if (form.entregaMuestras === "Sí") marcar(505, 82);
+if (form.entregaMuestras === "No") marcar(570, 82);
 
     // FIRMA FIJA DEL JEFE DE LOGÍSTICA
     // PNG limpio con fondo transparente para que no tape líneas ni textos.
     try {
-      const firmaBytes = await fetch("/firma-azul-solo.png").then((res) => res.arrayBuffer());
+      const firmaBytes = await fetch("/firma-logistica.png").then((res) => res.arrayBuffer());
       const firma = await pdfDoc.embedPng(firmaBytes);
       page.drawImage(firma, {
-        x: 72,
-        y: 64,
-        width: 95,
-        height: 28,
+        x: 92,
+        y: 55,
+        width: 92,
+        height: 42,
       });
+      escribir("Diego Cardozo", 116, 48, 6.5);
     } catch (error) {
       console.warn("No se pudo cargar la firma logística", error);
     }
 
     // ANEXO FOTOGRÁFICO OPCIONAL
     if (conFotos && fotos.length > 0) {
-      for (let i = 0; i < fotos.length; i++) {
-        const foto = fotos[i];
-        const bytes = await foto.arrayBuffer();
-        let image;
-        if (foto.type === "image/png") image = await pdfDoc.embedPng(bytes);
-        else image = await pdfDoc.embedJpg(bytes);
+  for (let i = 0; i < fotos.length; i++) {
+    try {
+      const foto = fotos[i];
+      const bytes = await foto.arrayBuffer();
 
-        const fotoPage = pdfDoc.addPage([595.32, 841.92]);
-        fotoPage.drawText("ANEXO FOTOGRÁFICO", { x: 50, y: 790, size: 16, font: bold });
-        fotoPage.drawText(`Remito: ${form.remito || "-"}   Patente: ${form.patentes || "-"}`, {
-          x: 50,
-          y: 765,
-          size: 10,
-          font,
-        });
-        fotoPage.drawText(`Foto ${i + 1} de ${fotos.length}`, { x: 50, y: 745, size: 10, font });
-
-        const maxWidth = 500;
-        const maxHeight = 620;
-        const scale = Math.min(maxWidth / image.width, maxHeight / image.height);
-        const w = image.width * scale;
-        const h = image.height * scale;
-        fotoPage.drawImage(image, {
-          x: (595.32 - w) / 2,
-          y: 90,
-          width: w,
-          height: h,
-        });
+      let image;
+      if (foto.type === "image/png") {
+        image = await pdfDoc.embedPng(bytes);
+      } else if (foto.type === "image/jpeg" || foto.type === "image/jpg") {
+        image = await pdfDoc.embedJpg(bytes);
+      } else {
+        console.warn("Formato no compatible:", foto.type);
+        continue;
       }
-    }
 
-    await guardarEnSheet();
+      const fotoPage = pdfDoc.addPage([595.32, 841.92]);
+
+      fotoPage.drawText("ANEXO FOTOGRÁFICO", {
+        x: 50,
+        y: 790,
+        size: 16,
+        font: bold,
+      });
+
+      fotoPage.drawText(`Remito: ${form.remito || "-"}   Patente: ${form.patentes || "-"}`, {
+        x: 50,
+        y: 765,
+        size: 10,
+        font,
+      });
+
+      fotoPage.drawText(`Foto ${i + 1} de ${fotos.length}`, {
+        x: 50,
+        y: 745,
+        size: 10,
+        font,
+      });
+
+      const maxWidth = 500;
+      const maxHeight = 620;
+
+      const scale = Math.min(
+        maxWidth / image.width,
+        maxHeight / image.height
+      );
+
+      const w = image.width * scale;
+      const h = image.height * scale;
+
+      fotoPage.drawImage(image, {
+        x: (595.32 - w) / 2,
+        y: 90,
+        width: w,
+        height: h,
+      });
+    } catch (error) {
+      console.error("Error agregando foto al PDF:", error);
+    }
+  }
+}
+console.log("ANTES DE GUARDAR EN SHEET");
+await guardarEnSheet();
+console.log("DESPUÉS DE GUARDAR EN SHEET");
 
     const pdfBytes = await pdfDoc.save();
     const blob = new Blob([pdfBytes], { type: "application/pdf" });
@@ -522,8 +541,6 @@ export default function App() {
         <input type="file" multiple accept="image/*" onChange={(e) => setFotos(Array.from(e.target.files))} />
         {fotos.length > 0 && <p>{fotos.length} foto/s seleccionada/s</p>}
       </section>
-
-      {estadoGuardado && <p className="save-status">{estadoGuardado}</p>}
 
       <div className="actions">
         <button className="secondary" onClick={() => generarPDF(false)}>Generar PDF sin fotos</button>
